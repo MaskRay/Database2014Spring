@@ -1,0 +1,169 @@
+\title{\input{_title.tex}}
+\author{MaskRay}
+\maketitle
+
+\section{任务}
+
+实现近似抽取，近似串有两种度量方式：Levenshtein edit distance和Jaccard index。
+需要实现\texttt{AEE}类的\texttt{createIndex}、\texttt{aeeED}、\texttt{aeeJaccard}三个方法。
+
+\section{Faerie algorithm}
+
+实现采用\cite{faerie}中提到的Faerie algorithm。
+
+\subsection{索引}
+
+读入描述entity的文件采用\texttt{mmap}：
+
+\begin{minted}{c++}
+struct stat s;
+int fd = open(filename, O_RDONLY);
+fstat(fd, &s);
+mmap(0, s.st_size, PROT_READ, MAP_PRIVATE | MAP_POPULATE, fd, 0);
+\end{minted}
+
+其中的\texttt{MAP\_POPULATE}是为了让产生read-ahead的效果，加速文件读入。
+
+索引的数据结构包含：
+
+\begin{itemize}
+  \item entity向量\texttt{e}
+  \item 把Q-gram映射为entity编号的若干倒排索引\texttt{s2gid}。
+  \item 若干倒排索引\texttt{gid2e}，为每个entity中出现的Q-gram保存包含该Q-gram的entity向量。
+\end{itemize}
+
+对于每个输入的字串，使用类似Rabin-Karp string search算法的方式，
+获取当前长为$q$的窗口中的Q-gram，计算出散列值，找到对应的倒排索引，
+并在该索引末端加入当前行号。如果输入字串有重复的Q-gram，那么当前行号可能会在倒排索引中插入多次。
+然后窗口向右移动一格，把之前的散列值通过rolling hash计算出下一时刻的值。
+
+\texttt{s2gid}的每个倒排索引末尾添加哨兵元素\texttt{INT\_MAX}。
+
+\subsection{近似抽取}
+
+Levenshtein edit distance和Jaccard index均可用Faerie算法处理。
+对于每个文档执行一次single-heap based algorithm。
+
+\subsubsection{建立binary heap}
+
+首先把长度为$n$的\texttt{doc}划分为$n-q+1$的Q-gram，经\texttt{s2gid}映射后得到$n-q+1$个指向倒排索引的指针。
+以指针指向的值(entity编号)为第一关键字，位置为第二关键字使用Floyd's algorithm在$\Theta(|L|)$时间内建立binary heap \texttt{L}。
+
+\subsubsection{Tournament sort进行N-way merge得到候选子串}
+
+令$|e|$表示entity $e$的长度(和论文中定义不同)。
+
+如果是Levenshtein edit distance查询，则设置$\bot_e=|e|-q+1-\tau$，
+$\top_e=|e|-q+1+\tau$，$T_l=|e|-q+1-q\tau$；
+如果是Jaccard index查询，则设置$\bot_e=\lceil\frac{|e|-q+1}{\tau}\rceil$，
+$\top_e=\lfloor\frac{|e|-q+1}{\tau}\rfloor$，$T_l=\bot_e$。
+
+\begin{enumerate}
+  \item 记堆顶元素为\texttt{eeid}，弹出所有等于\texttt{eeid}的元素得到\cite{faerie}中的$P_e$。
+  \item 由于位置为第二关键字，得到的$P_e$以及有序了。
+  \item 使用尺取法寻找包含$P_e$中至少$T_l$个元素，且包含的Q-gram数在区间$[\bot_e,\top_e]$内的所有窗口。
+  \item 每个窗口可以产生若干候选子串。
+\end{enumerate}
+
+代码使用了batch-count pruning，使用尺取法时可以用\cite{faerie}中提到的二分检索方法，一次把指针移动若干步。
+
+\subsubsection{Verification}
+
+之后对每个候选子串进行检验，是否满足Jaccard index或Levenshtein编辑距离的阈值要求。
+
+\paragraph{Levenshtein edit distance}
+
+两个字符串的Levenshtein edit distance可以使用$\Theta(nm)$的Needleman–Wunsch algorithm计算。
+
+注意到代码中使用到编辑距离的地方都有阈值$\tau$的限制，如果编辑距离超过阈值，那么它的实际值无关紧要。因此我们可以只计算动态规划矩阵中对角线带状区域的状态。
+
+另外当其中某个字符串的长度小于等于128时，可以使用内置类型\texttt{\_\_int128}采用bit vector的算法\cite{edit03}加速到$\Theta(n) $。
+
+两个字符串的Levenshtein edit distance的下界是字符集所有字符出现频数差的绝对值的和的一半，
+当该下界小于等于阈值时再进行实际计算。可以用\texttt{\_mm\_sad\_epu8}来估算频数差的绝对值的和。
+当某个字符频数差大于等于256时会低估实际值，但对结果没有影响。
+
+\subsubsection{Jaccard index}
+
+计算两个串$a$和$b$的Jaccard index时使用公式$\frac{\mathrm{overlap}}{|a|+|b|-\mathrm{overlap}}$。
+
+采用scan count的方式计算$\mathrm{overlap}$。根据\texttt{s2gid}计算查询串所有Q-gram的编号，在计数容器中增加一。
+然后对于候选串的所有Q-gram，若计数容器中的值大于零则减去零并加到答案中。再遍历候选串的所有Q-gram，把减去的值再加回来。
+
+\section{Trie-based\cite{taste}}
+
+令Levenshtein编辑距离阈值为$\tau$，对于每个entity $e$，划分为$\tau+1$个片段存入trie。
+
+若文档$d$和某个$e$相似，则文档必然以$e$的某个片段$e_m$为子串。检索trie即可得到所有候选entity。
+
+当探测到文档的某子串$d[i,j)$对应的trie节点包含某个entity $e$，则$e$就是一个候选entity，且可以知道
+$e$的某个$e_m$已经出现在$d[i,j)$中了，包含$d[i,j)$的某个更长子串$d[k,l)$和$e$的编辑距离是：
+
+\begin{eqnarray*}
+\text{ED}(e,d[k,l)) &=& \text{ED}(e_l,d[k,i)) + \text{ED}(e_m,d[i,j)) + \text{ED}(e_r,d[j,k)) \\
+&=& \text{ED}(e_l,d[k,i)) + \text{ED}(e_r,d[j,k))
+\end{eqnarray*}
+
+即需要把$e_m$前面的部分$e_l$和$d[*,i)$匹配，$e_m$后面的部分$e_r$和$d[j,*)$匹配，两部分可以分开考虑。
+总的编辑距离就是两部分匹配结果编辑距离的和。如果左侧的$\text{ED}(e_l,d[k,i))=u\leq \tau$，则右侧的$\text{ED}(e_r,d[j,k))$
+最大可以是$\tau-u$。
+
+\paragraph{$\text{ED}(e_r,d[j,k))$}
+
+$\text{ED}(e_r,d[j,k))$可以用带阈值限制的编辑距离算法计算。
+
+\paragraph{多个串共同包含$e_m$时复用计算结果}
+
+多个串共同包含$e_m$时，它们的右侧部分$e_r$可能也有公共前缀，这部分串的编辑距离结果可以复用。
+
+把trie节点中检索到的entity按$e_r$组织为下层trie(原trie为上层trie)。求出下层trie的最左叶节点和$d[j,l)$的编辑距离后，
+要切换到次左叶节点，它们的longest common prefix和$d[j,l)$的编辑距离动态规划值可以复用。
+
+构建下层trie比较耗空间，可以借鉴suffix array的思路，把索引到的entity的右侧部分$e_r$排序，先计算字典需最小$e_r$和$d[j,l)$的编辑距离，
+再计算字典序次小的$e_r$和$d[j,k)$的编辑距离，如此处理其他所有$e_r$。
+
+另外如果发现计算到$d[g,*)$时发现所有$d[g,*)$都超过$\tau$了，那么可以立刻停止计算。
+
+\paragraph{生成结果}
+
+把匹配某个$e$左侧部分$e_l$的$d[k,i)$和匹配对应右侧部分$e_r$的$d[j,l)$求cartesian product，
+如果两部分编辑距离和小于$\tau$，拼接两部分以及$e_m$可以得到一个结果子串。
+
+文档的某个子串和某个$e$的公共部分可能较长，导致$e$的多个片段都在trie中被检索到。
+产生的结果可能会重复，另外编辑距离的计算各片段间也会有很大的重叠。我没想到怎么利用。
+
+\paragraph{Aho-Corasick automaton}
+
+目前的方式是对于文档的每个位置都对上层trie探测得到候选entity，可以Aho-Corasick automaton改进。
+注意Aho-Corasick automaton和Aho-Corasick algorithm的區別，前者會把trie改造爲圖(一些網絡資料稱之爲trie圖)。
+探測的文檔子串的右邊界在不斷增加，左邊界要根據Aho-Corasick狀態的轉移選擇性變化。
+
+\begin{minted}{c++}
+TrieNode *p = trie_root, *q;
+for (int i, j = 0; j < m; ) {
+  u8 c = doc[j++];
+  i += p->dep+1-p->ch[c]->dep;
+  p = p->ch[c];
+  for (ii = i, q = p; ; ) {
+    // 考慮文檔d[ii,j)和節點q表示的e_m的下層trie q->inferior
+    if (p->pi) {
+      ii += p->depth-p->pi->depth;
+      p = p->pi;
+    } else
+      break;
+  }
+}
+\end{minted}
+
+對於每個匹配的\texttt{p}都要沿着\texttt{p->pi->pi->\ldots}鍊上溯到根。可以對於每個trie節點記錄其最長的表示一個$e_m$的後綴(即\texttt{pi}的若干次冪)。
+這樣可以被多串匹配部分的複雜度從$O(T+K+PK)$優化到$O(T+K)$，其中$T$爲文檔長度，$K$爲$e_m$出現次數和，$P$爲單個$e_m$的長度。
+
+\section{演化}
+
+Faerie 7.263
+Faerie+ED共用 4.197
+Trie-based初版 2.4s
+使用Aho-Corasick automaton后2.264s
+利用公共前缀后 2.133s
+
+\printbibliography

@@ -1,0 +1,42 @@
+html
+  head
+    meta lang='utf-8'
+    link rel='stylesheet' href='css/font-awesome.min.css'
+    link rel='stylesheet' href='semantic-ui/css/semantic.min.css'
+    link rel='stylesheet' href='css/style.css'
+  body
+    .ui.inverted.page.grid.masthead.segment
+      .column
+        .inverted.secondary.pointing.ui.menu
+          .header.item
+            | Singapore Search
+          .right.menu
+            .ui.top.right.pointing.mobile.dropdown.link.item
+              a href='/report' Doc
+            .ui.top.right.pointing.mobile.dropdown.link.item
+              a href='/main' Search
+            .ui.top.right.pointing.mobile.dropdown.link.item
+              a href='/' Home
+        form.form.segment.main-form
+          h1.ui.inverted.header
+            | Singapore Search
+          .ui.left.icon.action.input
+            i.icon.map.marker
+            input#query name='query' type='text' placeholder='Gillman Heights Condominium'
+          button.ui.blue.submit.button Go
+    .ui.page.grid.overview.segment
+      .twelve.wide.column
+        #map
+          .ui.active.dimmer
+            .ui.loader
+      .four.wide.column
+        .ui.labeled.vertical.fluid.inverted.icon.menu.hidden data-bind='foreach: places'
+          a.item.place data-bind='attr: {"data-title": title, "data-content": content}, click: function(){window.map.clickPlaceItem(this)}'
+            i.icon.map.marker
+            span data-bind='text: name'
+    script src='js/jquery/jquery.min.js'
+    script src='js/jquery.autocomplete.min.js'
+    script src='js/knockout/knockout.js'
+    script src='semantic-ui/javascript/semantic.min.js'
+    script src='http://maps.googleapis.com/maps/api/js?v=3.10&sensor=false'
+    script src='js/app.js'

@@ -1,0 +1,21 @@
+{
+  "name": "database-final",
+  "version": "0.0.1",
+  "private": "true",
+  "dependencies": {
+    "jquery": "~2.1.1",
+    "knockout": "~3.1.0",
+    "jquery-waypoints": "~2.0.5"
+  },
+  "exportsOverride": {
+    "jquery": {
+      "js": "jquery.min.js"
+    },
+    "knockout": {
+      "js": "dist/knockout.js"
+    },
+    "jquery-waypoints": {
+      "js": "waypoints.min.js"
+    }
+  }
+}

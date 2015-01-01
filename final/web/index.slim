@@ -1,0 +1,78 @@
+html
+  head
+    meta lang='utf-8'
+    link rel='stylesheet' href='css/font-awesome.min.css'
+    link rel='stylesheet' href='semantic-ui/css/semantic.min.css'
+    link rel='stylesheet' href='css/style.css'
+  body.index
+    .wrap
+      .ui.inverted.page.grid.masthead.segment
+        .column
+          .inverted.secondary.pointing.ui.menu
+            .header.item
+              | Singapore Search
+            .right.menu
+              .ui.top.right.pointing.mobile.dropdown.link.item
+                a href='/report' Doc
+              .ui.top.right.pointing.mobile.dropdown.link.item
+                a href='/main' Search
+              .ui.top.right.pointing.mobile.dropdown.link.item
+                a href='/' Home
+          img.ui.medium.image src='img/cat.png'
+          .ui.transition.information
+            h1.ui.inverted.header
+              | Sinapore Search
+            form action='main'
+              .ui.left.icon.action.input
+                i.icon.map.marker
+                input#query name='query' type='text' placeholder='Gillman Heights Condominium'
+              button.ui.blue.submit.button Go
+      .ui.page.grid.overview.segment
+        .ui.two.wide.column
+        .twelve.wide.column
+          .ui.three.column.center.aligned.stackable.divided.grid
+            .column
+              .ui.icon.header
+                i.circular.icon.magic
+                | Enhanced suffix array
+              p
+                | Linear search time
+              p
+                a.ui.teal.right.labeled.icon.button href='/report#使用suffix-array检索字串'
+                  | Learn
+                  i.right.long.arrow.icon
+            .column
+              .ui.icon.header
+                i.circular.icon.empty.star
+                | Improved Ko-Aluru SA construction algorithm
+              p
+                | Construct suffix array in linear time
+              p
+                a.ui.teal.right.labeled.icon.button href='/report#ka-aluru-suffix-array-construction-algorithm'
+                  | Learn
+                  i.right.long.arrow.icon
+            .column
+              .ui.icon.header
+                i.circular.icon.map.marker
+                | Priority R-tree
+              p
+                | A worst-case asymptotically optimal alternative to the spatial tree R-tree
+              p
+                a.ui.teal.right.labeled.icon.button href='/report#priority-r-tree'
+                  | Learn
+                  i.right.long.arrow.icon
+      .footer-push
+    .ui.inverted.transparent.page.grid.segment.footer
+      .column
+        footer
+          h3.ui.header
+            | Contact
+          addr
+            | MaskRay
+            br
+            | i@maskray.me
+    script src='js/jquery/jquery.min.js'
+    script src='js/jquery.autocomplete.min.js'
+    script src='semantic-ui/javascript/semantic.min.js'
+    script src='http://maps.googleapis.com/maps/api/js?v=3.10&sensor=false'
+    script src='js/app.js'

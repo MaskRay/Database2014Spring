@@ -1,0 +1,113 @@
+\title{\input{_title.tex}}
+\author{MaskRay}
+\maketitle
+
+\section{任务}
+
+实现近似串查询，近似串有两种度量方式：Levenshtein edit distance和Jaccard index。
+需要实现\texttt{SimSeacher}类的\texttt{createIndex}、\texttt{searchED}、\texttt{searchJaccard}三个方法。
+
+代码中实现了brute-force、tournament sort、MergeSkip\cite{LLL08}和DivideSkip\cite{LLL08}四种查询算法。
+
+\section{BruteForce}
+
+枚举所有字符串，和查询字符串一一进行Levenshtein edit distance或Jaccard index的计算，
+若满足阈值条件则添加到存放结果的向量。
+
+\section{Tournament sort}
+
+采用filter-and-verification framework，代码中实现了索引、Filter和Verification三个部分。
+
+\subsection{索引}
+
+索引的数据结构是若干倒排索引，另外有一个hash table为Q-gram到倒排索引的映射。
+
+执行\texttt{createIndex}构建索引时，
+对于每个输入的字串，使用类似Rabin-Karp string search算法的方式，
+获取当前长为$q$的窗口中的Q-gram，计算出散列值，找到对应的倒排索引，
+并在该索引末端加入当前行号。
+如果输入字串有重复的Q-gram，那么当前行号可能会在倒排索引中插入多次。
+然后窗口向右移动一格，把之前的散列值通过rolling hash计算出下一时刻的值。
+
+输入文件读入完毕后，对于hash table中的每个倒排索引(必然是非空的)，
+在末端加入作为哨兵元素的无穷大。
+
+\subsection{Filter}
+
+对于一个查询，使用类似构建索引时的Rabin-Karp string search algorithm，
+对于每个长为$q$的窗口中的Q-gram，找到对应的倒排索引，
+把指向首元素的指针放入列表$L$中。
+设查询字串长度位$n$，那么$L$中将会有$n-q+1$个指针(可能重复)。
+
+\subsubsection{建立binary heap}
+
+列表$L$的元素是指向倒排索引的指针，以指针指向的值为关键字使用Floyd's algorithm
+在$\Theta(|L|)$时间内建立binary heap $L$。
+
+\subsubsection{Tournament sort进行N-way merge}
+
+\begin{enumerate}
+  \item 堆顶指针指向的值为$\mathrm{old}$，若old为无穷大则返回
+  \item 计算堆顶元素指向的值$\mathrm{old}$的出现次数，若大于等于阈值$\mathit{overlap}$则添加到候选集中
+  \item 把堆顶元素指针向前移动一格(即指向对应的倒排索引的下一项)，若下一项仍等于原来指向的值则继续移动
+  \item 上述操作后堆顶指针指向的值变大了，对它进行下滤操作
+  \item 若新的堆顶指向的值等于$\mathrm{old}$则跳转到步骤3
+\end{enumerate}
+
+之后对候选集的每个元素进行检验，是否满足Jaccard index或Levenshtein编辑距离的阈值要求，
+输出筛选后的。
+
+\subsection{Verification}
+
+\subsubsection{Levenshtein edit distance}
+
+对于\texttt{searchED}操作，需要对每个候选字串和查询字串计算编辑距离。
+
+两个字符串的Levenshtein edit distance可以使用$\Theta(nm)$的Needleman–Wunsch algorithm计算。
+
+注意到代码中使用到编辑距离的地方都有阈值$\mathit{th}$限制，
+如果编辑距离超过阈值，那么它的实际值无关紧要。
+因此我们可以只计算动态规划矩阵中对角线带状区域的状态。
+
+另外当其中某个字符串的长度小于等于128时，还可以采用bit vector的算法\cite{edit03}加速到$\Theta(n) $。
+
+\subsubsection{Jaccard index}
+
+采用scan count的方式。
+先用rolling hash计算查询串所有Q-gram的标号，在计数容器中增加一。
+然后对于候选串的所有Q-gram，若计数容器中的值大于零则减去零并加到答案中。
+再便利候选串的所有Q-gram，把减去的值再加回来。
+
+\section{MergeSkip}
+
+和tournament sort基本结构相同，对Filter部分做了优化，
+即优化了统计每个字串的出现次数，过程如下：
+
+\begin{enumerate}
+  \item 堆顶指针指向的值为$\mathrm{old}$，若old为无穷大则返回
+  \item 计算堆顶元素指向的值$\mathrm{old}$的出现次数，若大于等于阈值$\mathit{overlap}$则添加到候选集中
+  \item 把堆顶元素指针向前移动一格(即指向对应的倒排索引的下一项)，若下一项仍等于原来指向的值则继续移动
+  \item 上述操作后堆顶指针指向的值变大了，对它进行下滤操作
+  \item 若新的堆顶指向的值等于$\mathrm{old}$则跳转到步骤3
+  \item 从堆中弹出$\mathit{overlap}-1$个元素，使用二分检索把这些倒排索引指针移动至大于当前堆顶指向的值，再重新插入堆中
+\end{enumerate}
+
+\section{DivideSkip}
+
+结合了MergeSkip和MergeOut。
+
+\begin{enumerate}
+  \item 使用启发函数把倒排索引划分为长索引和短索引两类，长索引有$\mathit{nlong}<\mathit{n}$个，其中$n$为索引个数
+  \item 对短索引采用MergeSkip算法，对于短索引中所有出现次数不少于$\mathit{overlap}-\mathit{nlong}$的元素，在所有长索引中二分检索
+  \item 将出现次数不少于$\mathit{overlap}$的元素添加到候选集中
+  \item 把堆顶元素指针向前移动一格(即指向对应的倒排索引的下一项)，若下一项仍等于原来指向的值则继续移动
+  \item 上述操作后堆顶指针指向的值变大了，对它进行下滤操作
+  \item 若新的堆顶指向的值等于$\mathrm{old}$则跳转到步骤4
+  \item 从堆中弹出$\mathit{overlap}-\mathit{nlong}-1$个元素，使用二分检索把这些倒排索引指针移动至大于当前堆顶指向的值，再重新插入堆中
+\end{enumerate}
+
+\section{其他}
+
+Tournament类使用了curiously recurring template pattern。
+
+\printbibliography

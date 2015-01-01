@@ -1,0 +1,35 @@
+html
+  head
+    meta lang='utf-8'
+    link rel='stylesheet' href='css/font-awesome.min.css'
+    link rel='stylesheet' href='semantic-ui/css/semantic.min.css'
+    link rel='stylesheet' href='css/style.css'
+  body.index
+    .ui.inverted.page.grid.masthead.segment
+      .column
+        .inverted.secondary.pointing.ui.menu
+          .header.item
+            | Singapore Search
+          .right.menu
+            .ui.top.right.pointing.mobile.dropdown.link.item
+              a href='/report' Doc
+            .ui.top.right.pointing.mobile.dropdown.link.item
+              a href='/main' Search
+            .ui.top.right.pointing.mobile.dropdown.link.item
+              a href='/' Home
+    .ui.page.grid.overview.segment
+      .sticky-wrapper
+        #peek
+          output.ui.vertical.pointing.secondary.menu
+            /a.item Meow
+      main.twelve.wide.column
+        h1 数据库专题训练——空间数据的即敲即得式检索
+        p
+          | HTML版文档由Pandoc转换而来，丢失了原LaTeX的部分信息。原始PDF：
+          a href='report.pdf' report.pdf
+        == open(File.join File.dirname(__FILE__), '../report/report.html').read
+    script src='js/jquery/jquery.min.js'
+    script src='js/jquery-waypoints/waypoints.min.js'
+    script src='semantic-ui/javascript/semantic.min.js'
+    script src='http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
+    script src='js/app.js'

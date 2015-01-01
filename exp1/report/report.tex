@@ -1,0 +1,67 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec,verbatim,minted}
+\usepackage{titlesec, titletoc}
+\usepackage[titletoc]{appendix}
+\usepackage[hyperfootnotes=false,colorlinks,linkcolor=blue,anchorcolor=blue,citecolor=blue]{hyperref}
+\usepackage[backend=bibtex]{biblatex}
+\defbibheading{bibliography}{\section{References}}
+\bibliography{refs.bib}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage[slantfont,boldfont,CJKnumber]{xeCJK}
+\usepackage{textgreek}
+
+\usepackage{hyperref}
+\usepackage{indentfirst}
+\usepackage{float}			% don't automatically change location of figure [H]
+\usepackage{chngpage}		% use \changetext to change page size
+\usepackage{caption}\captionsetup{hypcap=true}  % ref to jump to object instead of caption
+\setCJKmainfont{SimSun}
+\setlength{\parindent}{2em}
+\changetext{}{2.2cm}{-1.5cm}{-1.5cm}{}
+
+\usepackage{hyperref}
+\usepackage{indentfirst}
+\usepackage{float}			% don't automatically change location of figure [H]
+\usepackage{chngpage}		% use \changetext to change page size
+\usepackage{caption}\captionsetup{hypcap=true}  % ref to jump to object instead of caption
+\setlength{\parindent}{2em}
+\changetext{}{2.2cm}{-1.5cm}{-1.5cm}{}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\lhead[]{}\rhead[]{}
+\setlength{\headheight}{15.2pt}
+\fancyhead[C]{\emph{\input{_title.tex}}}
+
+\renewcommand{\today}{\number\year 年 \number\month 月 \number\day 日}
+\renewcommand{\abstractname}{摘要}
+\renewcommand{\contentsname}{目录}
+\renewcommand{\tablename}{表}
+\renewcommand{\figurename}{图}
+\newcommand{\figref}[1]{\hyperref[fig:#1]{图\ref*{fig:#1}}}
+\newcommand{\secref}[1]{\hyperref[sec:#1]{\ref*{sec:#1}节}}
+\newcommand{\tabref}[1]{\hyperref[tab:#1]{表\ref*{tab:#1}}}
+
+\def\ojoin{\setbox0=\hbox{$\Join$}%
+\rule[0.1ex]{.27em}{.4pt}\llap{\rule[1.3ex]{.27em}{.4pt}}}
+\def\leftouterjoin{\mathbin{\ojoin\mkern-5.8mu\Join}}
+\def\rightouterjoin{\mathbin{\Join\mkern-5.8mu\ojoin}}
+\def\fullouterjoin{\mathbin{\ojoin\mkern-5.8mu\Join\mkern-5.8mu\ojoin}}
+
+\newlength\savewidth
+\newcommand\shline{\noalign{\global\savewidth\arrayrulewidth\global\arrayrulewidth 1pt}
+                   \hline
+                   \noalign{\global\arrayrulewidth\savewidth}}
+\newcommand\VRule[1][\arrayrulewidth]{\vrule width #1}
+
+%\titleformat{\section}{\centering\bf\Large}{\CJKnumber{\thesection}}{1em}{}
+
+\usepackage{breqn}
+
+\begin{document}
+
+\input{1.tex}
+
+\end{document}

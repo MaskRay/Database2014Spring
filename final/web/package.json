@@ -1,0 +1,22 @@
+{
+  "name": "database-fianl",
+  "version": "0.0.1",
+  "scripts": {
+    "start": "grunt"
+  },
+  "dependencies": {
+    "grunt-shell": "~0.6.4"
+  },
+  "devDependencies": {
+    "grunt": "0.4.x",
+    "grunt-contrib-coffee": "0.6.x",
+    "grunt-contrib-watch": "0.5.x",
+    "grunt-contrib-clean": "0.5.x",
+    "grunt-contrib-connect": "0.5.x",
+    "grunt-contrib-compress": "0.5.x",
+    "grunt-contrib-copy": "0.4.x",
+    "grunt-slim": "~0.1.0",
+    "grunt-contrib-sass": "~0.5.0",
+    "grunt-bower-task": "0.3.4"
+  }
+}
